@@ -13,44 +13,51 @@ app = Flask(__name__)
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 poppler_path = r"C:\Users\vishn\Downloads\Release-24.08.0-0\poppler-24.08.0\Library\bin"
 
+# ---- Regex Map ----
+regex_map = {
+    "Vendor": r"Vendor[:\s]*(.+)",
+    "Address": r"Address[:\s]*(.+)",
+    "Invoice Number": r"Invoice\s*#[:\s]*([A-Z0-9\-]+)",
+    "Date": r"Date[:\s]*([0-9]{2}/[0-9]{2}/[0-9]{4})",
+    "Total Amount": r"(Total\s*Amount|Grand\s*Total|Amount\s*Payable|Total)[:\s₹$]*([\d,]+\.\d{2})",
+    "GSTIN": r"GSTIN[:\s]*([0-9A-Z]{15})",
+    "PAN": r"PAN[:\s]*([A-Z]{5}[0-9]{4}[A-Z])",
+    "Email": r"Email[:\s]*([\w\.-]+@[\w\.-]+)",
+    "Phone Number": r"(Phone|Contact)[:\s]*(\+?\d{10,13})",
+    "Subtotal": r"Subtotal[:\s₹$]*([\d,]+\.\d{2})",
+    "Tax": r"Tax[:\s₹$]*([\d,]+\.\d{2})",
+    "Discount": r"Discount[:\s₹$]*([\d,]+\.\d{2})"
+}
+
+
 # ---- Field Extraction Function ----
-def extract_invoice_fields(text):
+def extract_invoice_fields(text, selected_fields):
     data = {}
-
-    vendor = re.search(r"Vendor[:\s]*(.+)", text, re.IGNORECASE)
-    address = re.search(r"Address[:\s]*(.+)", text, re.IGNORECASE)
-    invoice = re.search(r"Invoice\s*#[:\s]*([A-Z0-9\-]+)", text, re.IGNORECASE)
-    date = re.search(r"Date[:\s]*([0-9]{2}/[0-9]{2}/[0-9]{4})", text)
-
-    total = re.search(
-        r"(Total\s*Amount|Grand\s*Total|Amount\s*Payable|Total)[:\s₹$]*([\d,]+\.\d{2})",
-        text, re.IGNORECASE
-    )
-
-    if vendor: data["Vendor"] = vendor.group(1).strip()
-    if address: data["Address"] = address.group(1).strip()
-    if invoice: data["Invoice Number"] = invoice.group(1).strip()
-    if date: data["Date"] = date.group(1).strip()
-    if total: data["Total Amount"] = total.group(2).strip()
-
+    for field in selected_fields:
+        pattern = regex_map.get(field)
+        if pattern:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                value = match.group(len(match.groups()))
+                data[field] = value.strip()
     return data
 
 # ---- OCR Processor ----
-def process_file(file):
+def process_file(file, selected_fields):
     extracted = []
-
     filename = file.filename.lower()
+
     if filename.endswith(".pdf"):
         pages = convert_from_bytes(file.read(), dpi=300, poppler_path=poppler_path)
         for i, page in enumerate(pages):
             text = pytesseract.image_to_string(page)
-            fields = extract_invoice_fields(text)
+            fields = extract_invoice_fields(text, selected_fields)
             fields["Page"] = i + 1
             extracted.append(fields)
     else:
         img = Image.open(file)
         text = pytesseract.image_to_string(img)
-        fields = extract_invoice_fields(text)
+        fields = extract_invoice_fields(text, selected_fields)
         fields["Page"] = 1
         extracted.append(fields)
 
@@ -67,7 +74,12 @@ def upload_invoice():
         return "No file uploaded", 400
 
     file = request.files['file']
-    results = process_file(file)
+    selected_fields = request.form.getlist("fields")
+
+    if not selected_fields:
+        return "No fields selected", 400
+
+    results = process_file(file, selected_fields)
 
     df = pd.DataFrame(results)
     excel_path = "invoice_data.xlsx"
@@ -81,7 +93,6 @@ def upload_invoice():
             with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-        # ✅ Automatically open Excel file (only locally)
         try:
             os.startfile(excel_path)
         except Exception as e:
