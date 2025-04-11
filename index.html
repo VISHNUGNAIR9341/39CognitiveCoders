@@ -1,36 +1,195 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Invoice OCR Extractor</title>
-    <style>
-        body {
-            font-family: Segoe UI, sans-serif;
-            text-align: center;
-            padding-top: 50px;
-        }
-        input[type="file"] {
-            margin: 20px 0;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            font-size: 16px;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        h1 {
-            font-size: 28px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>FILLMATE Invoice OCR Extractor</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://png.pngtree.com/thumb_back/fh260/background/20210804/pngtree-modern-simple-elegant-beautiful-color-website-landing-page-background-image_757350.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      max-width: 600px;
+      width: 90%;
+      margin: 80px auto;
+    }
+
+    .branding {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .branding h1 {
+      font-size: 32px;
+      color: #007bff;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    /* Custom File Upload */
+    .custom-file-label {
+      display: block;
+      padding: 12px 20px;
+      background-color: #e9f0ff;
+      color: #007bff;
+      border: 2px dashed #007bff;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      margin-bottom: 10px;
+      transition: background 0.3s, border 0.3s;
+    }
+
+    .custom-file-label:hover {
+      background-color: #d0e6ff;
+      border-color: #0056b3;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    #file-name {
+      font-size: 13px;
+      color: #555;
+      text-align: center;
+      margin-top: -8px;
+      margin-bottom: 15px;
+    }
+
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      font-weight: normal;
+      color: #444;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .select-all {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      font-weight: 500;
+      color: #222;
+    }
+
+    button {
+      background-color: #007bff;
+      color: #fff;
+      font-weight: 600;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    p {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <body>
-    <h1>🧾 Upload Invoice (PDF/Image)</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required>
-        <br>
-        <button type="submit">Upload & Extract</button>
+  <div class="container">
+    <div class="branding">
+      <h1>FILLMATE</h1>
+      <p>Your Smart Invoice Parser</p>
+    </div>
+
+    <h2>Upload Invoice</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+      
+      <!-- Modern File Upload -->
+      <label for="file-upload" class="custom-file-label">📁 Click to Upload Invoice File</label>
+      <input type="file" name="file" id="file-upload" required>
+      <p id="file-name">No file chosen</p>
+
+      <!-- Checkbox Field Selection -->
+      <label>Select Fields to Extract:</label>
+
+      <div class="select-all">
+        <label><input type="checkbox" id="selectAll"> ADD ALL</label>
+      </div>
+
+      <div class="checkbox-group" id="fieldCheckboxes">
+        <label><input type="checkbox" name="fields" value="Vendor"> Vendor</label>
+        <label><input type="checkbox" name="fields" value="Address"> Address</label>
+        <label><input type="checkbox" name="fields" value="Invoice Number"> Invoice Number</label>
+        <label><input type="checkbox" name="fields" value="Date"> Date</label>
+        <label><input type="checkbox" name="fields" value="Total Amount"> Total Amount</label>
+        <label><input type="checkbox" name="fields" value="GSTIN"> GSTIN</label>
+        <label><input type="checkbox" name="fields" value="PAN"> PAN</label>
+        <label><input type="checkbox" name="fields" value="Email"> Email</label>
+        <label><input type="checkbox" name="fields" value="Phone Number"> Phone Number</label>
+        <label><input type="checkbox" name="fields" value="Subtotal"> Subtotal</label>
+        <label><input type="checkbox" name="fields" value="Tax"> Tax</label>
+        <label><input type="checkbox" name="fields" value="Discount"> Discount</label>
+      </div>
+
+      <button type="submit">Upload and Extract</button>
     </form>
+  </div>
+
+  <script>
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const fieldCheckboxes = document.querySelectorAll('#fieldCheckboxes input[type="checkbox"]');
+    const fileUpload = document.getElementById('file-upload');
+    const fileNameDisplay = document.getElementById('file-name');
+
+    // Toggle all field checkboxes when "ADD ALL" is checked
+    selectAllCheckbox.addEventListener('change', () => {
+      fieldCheckboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+      });
+    });
+
+    // Update filename text
+    fileUpload.addEventListener('change', () => {
+      fileNameDisplay.textContent = fileUpload.files.length
+        ? `📄 Selected: ${fileUpload.files[0].name}`
+        : 'No file chosen';
+    });
+  </script>
 </body>
 </html>
